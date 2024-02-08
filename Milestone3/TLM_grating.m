@@ -8,8 +8,8 @@ set(0, 'Defaultaxeslinewidth', 2)
 set(0, 'DefaultFigureWindowStyle', 'docked')
 
 % Constants and parameters
-c_c = 299792458;             % Speed of light
-c_eps_0 = 8.8542149e-12;     % Vacuum permittivity (F/m)
+c_c = 299792458;              % Speed of light
+c_eps_0 = 8.8542149e-12;      % Vacuum permittivity (F/m)
 c_eps_0_cm = c_eps_0 / 100;   % Vacuum permittivity in F/cm
 c_mu_0 = 1 / c_eps_0 / c_c^2; % Magnetic constant
 c_q = 1.60217653e-19;         % Elementary charge
@@ -19,11 +19,11 @@ c_h = c_hb * 2 * pi;          % Planck's constant
 %Real part of beta causes rotating field
 %Imaginary part of beta causes simple gain
 
-%beta_r = 0;
-%beta_i = 0; %nothing seems to change
-
 beta_r = 0;
-beta_i = 8; %gain occurs as expected (Ran with simple and modulated)
+beta_i = 0; %nothing seems to change
+
+%beta_r = 0;
+%beta_i = 8; %gain occurs as expected (Ran with simple and modulated)
 
 %beta_r = 80;
 %beta_i = 0; %no gain but modulation and stability falls
@@ -32,18 +32,18 @@ beta_i = 8; %gain occurs as expected (Ran with simple and modulated)
 %beta_i = 8;  %Increased gain and modulation on simple gaussian
 
 % Input parameters for the left side
-InputParasL.E0 = 1e7;       %Ef Scale
-InputParasL.we = 1000e9;    %Frequency 
+InputParasL.E0 = 5e7;       %Ef Scale
+InputParasL.we = 0;    %20e12; %Frequency 
 InputParasL.t0 = 3e-12;     %Delay/Time
-InputParasL.wg = 10e13;     %Width 
+InputParasL.wg = 5e-13;%10e-6;     %Width 
 InputParasL.phi = 0;        %Phase 
 
 % Input parameters for the right side 
-InputParasR.E0 = 1e7;       %Er Scale
-InputParasR.we = 0;         %Frequency
-InputParasR.t0 = 2e-12;     %Delay/Time
-InputParasR.wg = 5e-13;     %Width 
-InputParasR.phi = 0;        %Phase  
+InputParasR.E0 = 0;%1e7;       %Er Scale
+InputParasR.we = 0;            %Frequency
+InputParasR.t0 = 0;%2e-12;     %Delay/Time
+InputParasR.wg = 0;%5e-13;     %Width 
+InputParasR.phi = 0;           %Phase  
 
 % Group velocity and wavelength
 n_g = 3.5;
@@ -51,11 +51,11 @@ vg = c_c / n_g * 1e2; % Group velocity (cm/s)
 Lambda = 1550e-9;     % Wavelength
 
 % Simulation parameters
-plotN = 10;         %Speed
-L = 1000e-6 * 5e2;   % Length of the system in cm
+plotN = 20;           %Speed
+L = 1000e-6 * 1e2;    % Length of the system in cm
 XL = [0, L];          % X-axis limits
-YL = [-100e7, 100e7]; % Y-axis limits
-Nz = 500;            % Number of spatial points
+YL = [-10e7, 10e7]; % Y-axis limits
+Nz = 300;             % Number of spatial points
 dz = L / (Nz - 1);    % Spatial step size delta x
 dt = dz / vg;         % Temporal step size delta t
 fsync = dt * vg / dz; % Synchronization factor
@@ -90,6 +90,20 @@ OutputL(1) = Er(1);
 Ef(1) = InputL(1);
 Er(Nz) = InputR(1);
 
+% Define parameters for the grating
+kappa0 = 250;       % Maximum value of kappa
+kappaStart = 1/3;   % Starting position of the grating (as a fraction of the total length)
+kappaStop = 2/3;    % Ending position of the grating (as a fraction of the total length)
+
+% Initialize kappa with maximum value everywhere
+kappa = kappa0 * ones(size(z));
+
+% Set kappa to 0 outside the grating region
+kappa(z < L * kappaStart) = 0;
+kappa(z > L * kappaStop) = 0;
+
+Eprevf = Ef; % Store initial values of Ef
+
 % Plot initial fields
 figure('name', 'Fields')
 subplot(3, 1, 1)
@@ -122,18 +136,22 @@ for i = 2:Nt
     % Update boundary reflections
     RL = 0.9i; % Reflection coefficient for the left boundary
     RR = 0.9i; % Reflection coefficient for the right boundary
-    Ef(1) = InputL(i) + RL * Er(1); %Reflection
-    Er(Nz) = InputR(i) + RR * Ef(Nz); %Reflection
+    Ef(1) = InputL(i);  %+ RL * Er(1);   %Reflection
+    Er(Nz) = InputR(i); % + RR * Ef(Nz); %Reflection
 
     beta = ones(size(z))*(beta_r+1i*beta_i);
     exp_det = exp(-1i*dz*beta);
 
-    Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz - 1);
-    Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz);
+    Ef_temp = Ef;
+
+    Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz - 1) + 1i*dz*kappa(2:Nz).*Er(2:Nz);   %Update equations
+    Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(1:Nz-1).*Ef(1:Nz-1);   
+
+    Eprevf = Ef_temp;
 
     % Update reflected outputs
-    OutputR(i) = Ef(Nz) * (1 - RR); %Reflection
-    OutputL(i) = Er(1) * (1 - RL);  %Reflection
+    OutputR(i) = Ef(Nz); % * (1 - RR); %Reflection
+    OutputL(i) = Er(1);  % * (1 - RL);  %Reflection
 
     % Plotting every 'plotN' steps
     if mod(i, plotN) == 0
@@ -172,30 +190,36 @@ for i = 2:Nt
 
 end
 
-    fftOutput = fftshift(fft(OutputR));
-    omega = fftshift(wspace(time));
+% Plot kappa as a function of z
+figure;
+plot(z*10000, kappa); % Multiply by 10000 to convert from meters to micrometers for better visualization
+xlabel('z (\mum)');
+ylabel('\kappa');
+title('Grating Profile (\kappa as a function of z)');
+grid on;
 
-    %Original time-domain output versus time
-    figure('name', 'Original Time-Domain Output')
-    plot(time * 1e12, real(OutputR), 'g');
-    xlabel('Time (ps)')
-    ylabel('E')
-    title('Original Time-Domain Output')
+% Compute Fourier transforms of the outputs
+fftOutputL = fft(OutputL);
+fftOutputR = fft(OutputR);
 
-    %Magnitude of fftOutput versus omega
-    figure('name', 'FFT Output Magnitude')
-    plot(omega, abs(fftOutput), 'b');
-    xlabel('Frequency (Hz)')
-    ylabel('|FFT(OutputR)|')
-    title('Magnitude of FFT Output')
-    
+% Shift zero frequency component to the center
+fftOutputL_shifted = fftshift(fftOutputL);
+fftOutputR_shifted = fftshift(fftOutputR);
 
-    %Phase of fftOutput versus omega with unwrap
-    figure('name', 'FFT Output Phase')
-    plot(omega, unwrap(angle(fftOutput)), 'r');
-    xlabel('Frequency (Hz)')
-    ylabel('Phase of FFT(OutputR)')
-    title('Phase of FFT Output (Unwrapped)')
-    
+% Define the frequency range
+N = length(OutputL);
+fs = 1 / (time(2) - time(1)); % Sampling frequency
+frequencies = linspace(-fs/2, fs/2, N); % Frequency range
+
+% Plot the magnitude spectra
+figure;
+plot(frequencies, abs(fftOutputL_shifted), 'r', 'LineWidth', 2);
+hold on;
+plot(frequencies, abs(fftOutputR_shifted), 'b', 'LineWidth', 2);
+xlabel('Frequency (Hz)');
+ylabel('Magnitude');
+title('Frequency Spectrum of Left and Right Outputs');
+legend('Left Output', 'Right Output');
+grid on;
 
 

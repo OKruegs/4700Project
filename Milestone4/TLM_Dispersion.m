@@ -16,6 +16,12 @@ c_q = 1.60217653e-19;         % Elementary charge
 c_hb = 1.05457266913e-34;     % Reduced Planck's constant
 c_h = c_hb * 2 * pi;          % Planck's constant
 
+
+g_fwhm = 3.53e+012/10;
+LGamma = g_fwhm*2*pi;
+Lw0 = 0.0;
+LGain = 0.1;
+
 %Real part of beta causes rotating field
 %Imaginary part of beta causes simple gain
 
@@ -75,6 +81,14 @@ OutputR = nan(1, Nt);     % Right output wave
 Ef = zeros(size(z)); % Forward wave
 Er = zeros(size(z)); % Reverse wave
 
+Pf = zeros(size(z));
+Pr = zeros(size(z));
+
+Efp = Ef;
+Erp = Er;
+Pfp = Pf;
+Prp = Pr;
+
 Ef1 = @SourceFct2; % Function for left input source
 ErN = @SourceFct2; % Function for right input source 
 
@@ -130,6 +144,20 @@ for i = 2:Nt
     t = dt * (i - 1);
     time(i) = t;
     
+    Pf(1) = 0;
+    Pf(Nz) = 0;
+    Pr(1) = 0;
+    Pr(Nz) = 0;
+    Cw0 = -LGamma + 1i*Lw0;
+
+    Tf = LGamma*Ef(1:Nz-2) + Cw0*Pfp(2:Nz-1) + LGamma*Efp(1:Nz-2);
+    Pf(2:Nz-1) = (Pfp(2:Nz-1) + 0.5*dt*Tf)./(1-0.5*dt*Cw0);
+    Tr = LGamma*Er(3:Nz) + Cw0*Prp(2:Nz-1) + LGamma*Erp(3:Nz);
+    Pr(2:Nz-1) = (Prp(2:Nz-1) + 0.5*dt*Tr)./(1-0.5*dt*Cw0);
+
+    Ef(2:Nz-1) = Ef(2:Nz-1) - LGain*(Ef(2:Nz-1)-Pf(2:Nz-1));
+    Ef(2:Nz-1) = Er(2:Nz-1) - LGain*(Er(2:Nz-1)-Pr(2:Nz-1));
+
     InputL(i) = Ef1(t, InputParasL);
     InputR(i) = ErN(t, InputParasR);
 
@@ -142,85 +170,85 @@ for i = 2:Nt
     beta = ones(size(z))*(beta_r+1i*beta_i);
     exp_det = exp(-1i*dz*beta);
 
-    Ef_temp = Ef;
-
-    Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz - 1) + 1i*dz*kappa(2:Nz).*Er(2:Nz);   %Update equations
-    Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(1:Nz-1).*Ef_temp(1:Nz-1);   
-
-    Ef_temp = Ef;
+%     Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz - 1) + 1i*dz*kappa(2:Nz).*Er(2:Nz);   %Update equations
+%     Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(1:Nz-1).*Ef(1:Nz-1);   
 
     % Update reflected outputs
     OutputR(i) = Ef(Nz);% * (1 - RR); %Reflection
     OutputL(i) = Er(1);% * (1 - RL);  %Reflection
 
-    % Plotting every 'plotN' steps
-    if mod(i, plotN) == 0
-        subplot(3, 1, 1)
-        plot(z * 10000, real(Ef), 'r'); hold on
-        plot(z * 10000, imag(Ef), 'r--'); hold off
-        xlim(XL * 1e4)
-        ylim(YL)
-        xlabel('z(\mum)')
-        ylabel('E_f')
-        legend('\Re', '\Im')
-        hold off
-        subplot(3, 1, 2)
-        plot(z * 10000, real(Er), 'b'); hold on
-        plot(z * 10000, imag(Er), 'b--'); hold off
-        xlim(XL * 1e4)
-        ylim(YL)
-        xlabel('z(\mum)')
-        ylabel('E_r')
-        legend('\Re', '\Im')
+%     % Plotting every 'plotN' steps
+%     if mod(i, plotN) == 0
+%         subplot(3, 1, 1)
+%         plot(z * 10000, real(Ef), 'r'); hold on
+%         plot(z * 10000, imag(Ef), 'r--'); hold off
+%         xlim(XL * 1e4)
+%         ylim(YL)
+%         xlabel('z(\mum)')
+%         ylabel('E_f')
+%         legend('\Re', '\Im')
+%         hold off
+%         subplot(3, 1, 2)
+%         plot(z * 10000, real(Er), 'b'); hold on
+%         plot(z * 10000, imag(Er), 'b--'); hold off
+%         xlim(XL * 1e4)
+%         ylim(YL)
+%         xlabel('z(\mum)')
+%         ylabel('E_r')
+%         legend('\Re', '\Im')
+% 
+%         hold off
+%         subplot(3, 1, 3);
+%         plot(time * 1e12, real(InputL), 'r'); hold on
+%         plot(time * 1e12, real(OutputR), 'g');
+%         plot(time * 1e12, real(InputR), 'b');
+%         plot(time * 1e12, real(OutputL), 'm');
+%         xlim([0, Nt * dt * 1e12])
+%         ylim(YL)
+%         xlabel('time(ps)')
+%         ylabel('E')
+%         legend('Left Input', 'Right Output', 'Right Input', 'Left Output', 'Location', 'east')
+%         hold off
+%         pause(0.01)
+%     end
 
-        hold off
-        subplot(3, 1, 3);
-        plot(time * 1e12, real(InputL), 'r'); hold on
-        plot(time * 1e12, real(OutputR), 'g');
-        plot(time * 1e12, real(InputR), 'b');
-        plot(time * 1e12, real(OutputL), 'm');
-        xlim([0, Nt * dt * 1e12])
-        ylim(YL)
-        xlabel('time(ps)')
-        ylabel('E')
-        legend('Left Input', 'Right Output', 'Right Input', 'Left Output', 'Location', 'east')
-        hold off
-        pause(0.01)
-    end
-
+    Efp = Ef;
+    Erp = Er;
+    Pfp = Pf;
+    Prp = Pr;
 
 end
 
-% Plot kappa as a function of z
-figure;
-plot(z*10000, kappa); % Multiply by 10000 to convert from meters to micrometers for better visualization
-xlabel('z (\mum)');
-ylabel('\kappa');
-title('Grating Profile (\kappa as a function of z)');
-grid on;
-
-% Compute Fourier transforms of the outputs
-fftOutputL = fft(OutputL);
-fftOutputR = fft(OutputR);
-
-% Shift zero frequency component to the center
-fftOutputL_shifted = fftshift(fftOutputL);
-fftOutputR_shifted = fftshift(fftOutputR);
-
-% Define the frequency range
-N = length(OutputL);
-fs = 1 / (time(2) - time(1)); % Sampling frequency
-frequencies = linspace(-fs/2, fs/2, N); % Frequency range
-
-% Plot the magnitude spectra
-figure;
-plot(frequencies, abs(fftOutputL_shifted), 'r', 'LineWidth', 2);
-hold on;
-plot(frequencies, abs(fftOutputR_shifted), 'b', 'LineWidth', 2);
-xlabel('Frequency (Hz)');
-ylabel('Magnitude');
-title('Frequency Spectrum of Left and Right Outputs');
-legend('Left Output', 'Right Output');
-grid on;
+% % Plot kappa as a function of z
+% figure;
+% plot(z*10000, kappa); % Multiply by 10000 to convert from meters to micrometers for better visualization
+% xlabel('z (\mum)');
+% ylabel('\kappa');
+% title('Grating Profile (\kappa as a function of z)');
+% grid on;
+% 
+% % Compute Fourier transforms of the outputs
+% fftOutputL = fft(OutputL);
+% fftOutputR = fft(OutputR);
+% 
+% % Shift zero frequency component to the center
+% fftOutputL_shifted = fftshift(fftOutputL);
+% fftOutputR_shifted = fftshift(fftOutputR);
+% 
+% % Define the frequency range
+% N = length(OutputL);
+% fs = 1 / (time(2) - time(1)); % Sampling frequency
+% frequencies = linspace(-fs/2, fs/2, N); % Frequency range
+% 
+% % Plot the magnitude spectra
+% figure;
+% plot(frequencies, abs(fftOutputL_shifted), 'r', 'LineWidth', 2);
+% hold on;
+% plot(frequencies, abs(fftOutputR_shifted), 'b', 'LineWidth', 2);
+% xlabel('Frequency (Hz)');
+% ylabel('Magnitude');
+% title('Frequency Spectrum of Left and Right Outputs');
+% legend('Left Output', 'Right Output');
+% grid on;
 
 

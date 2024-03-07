@@ -45,11 +45,11 @@ InputParasL.wg = 5e-13;%10e-6;     %Width
 InputParasL.phi = 0;        %Phase 
 
 % Input parameters for the right side 
-InputParasR.E0 = 0;%1e7;       %Er Scale
-InputParasR.we = 0;            %Frequency
-InputParasR.t0 = 0;%2e-12;     %Delay/Time
-InputParasR.wg = 0;%5e-13;     %Width 
-InputParasR.phi = 0;           %Phase  
+% InputParasR.E0 = 0;%1e7;       %Er Scale
+% InputParasR.we = 0;            %Frequency
+% InputParasR.t0 = 0;%2e-12;     %Delay/Time
+% InputParasR.wg = 0;%5e-13;     %Width 
+% InputParasR.phi = 0;           %Phase  
 
 % Group velocity and wavelength
 n_g = 3.5;
@@ -177,40 +177,40 @@ for i = 2:Nt
     OutputR(i) = Ef(Nz);% * (1 - RR); %Reflection
     OutputL(i) = Er(1);% * (1 - RL);  %Reflection
 
-%     % Plotting every 'plotN' steps
-%     if mod(i, plotN) == 0
-%         subplot(3, 1, 1)
-%         plot(z * 10000, real(Ef), 'r'); hold on
-%         plot(z * 10000, imag(Ef), 'r--'); hold off
-%         xlim(XL * 1e4)
-%         ylim(YL)
-%         xlabel('z(\mum)')
-%         ylabel('E_f')
-%         legend('\Re', '\Im')
-%         hold off
-%         subplot(3, 1, 2)
-%         plot(z * 10000, real(Er), 'b'); hold on
-%         plot(z * 10000, imag(Er), 'b--'); hold off
-%         xlim(XL * 1e4)
-%         ylim(YL)
-%         xlabel('z(\mum)')
-%         ylabel('E_r')
-%         legend('\Re', '\Im')
-% 
-%         hold off
-%         subplot(3, 1, 3);
-%         plot(time * 1e12, real(InputL), 'r'); hold on
-%         plot(time * 1e12, real(OutputR), 'g');
-%         plot(time * 1e12, real(InputR), 'b');
-%         plot(time * 1e12, real(OutputL), 'm');
-%         xlim([0, Nt * dt * 1e12])
-%         ylim(YL)
-%         xlabel('time(ps)')
-%         ylabel('E')
-%         legend('Left Input', 'Right Output', 'Right Input', 'Left Output', 'Location', 'east')
-%         hold off
-%         pause(0.01)
-%     end
+    % Plotting every 'plotN' steps
+    if mod(i, plotN) == 0
+        subplot(3, 1, 1)
+        plot(z * 10000, real(Ef), 'r'); hold on
+        plot(z * 10000, imag(Ef), 'r--'); hold off
+        xlim(XL * 1e4)
+        ylim(YL)
+        xlabel('z(\mum)')
+        ylabel('E_f')
+        legend('\Re', '\Im')
+        hold off
+        subplot(3, 1, 2)
+        plot(z * 10000, real(Er), 'b'); hold on
+        plot(z * 10000, imag(Er), 'b--'); hold off
+        xlim(XL * 1e4)
+        ylim(YL)
+        xlabel('z(\mum)')
+        ylabel('E_r')
+        legend('\Re', '\Im')
+
+        hold off
+        subplot(3, 1, 3);
+        plot(time * 1e12, real(InputL), 'r'); hold on
+        plot(time * 1e12, real(OutputR), 'g');
+        plot(time * 1e12, real(InputR), 'b');
+        plot(time * 1e12, real(OutputL), 'm');
+        xlim([0, Nt * dt * 1e12])
+        ylim(YL)
+        xlabel('time(ps)')
+        ylabel('E')
+        legend('Left Input', 'Right Output', 'Right Input', 'Left Output', 'Location', 'east')
+        hold off
+        pause(0.01)
+    end
 
     Efp = Ef;
     Erp = Er;

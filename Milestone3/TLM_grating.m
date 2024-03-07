@@ -32,17 +32,17 @@ beta_i = 0; %nothing seems to change
 %beta_i = 8;  %Increased gain and modulation on simple gaussian
 
 % Input parameters for the left side
-InputParasL.E0 = 5e7;       %Ef Scale
-InputParasL.we = 0;    %20e12; %Frequency 
+InputParasL.E0 = 300;       %Ef Scale
+InputParasL.we = 0;%0; %Frequency 
 InputParasL.t0 = 3e-12;     %Delay/Time
-InputParasL.wg = 5e-13;%10e-6;     %Width 
+InputParasL.wg = 5e-13;     %Width 
 InputParasL.phi = 0;        %Phase 
 
 % Input parameters for the right side 
-InputParasR.E0 = 0;%1e7;       %Er Scale
+InputParasR.E0 = 0;       %Er Scale
 InputParasR.we = 0;            %Frequency
-InputParasR.t0 = 0;%2e-12;     %Delay/Time
-InputParasR.wg = 0;%5e-13;     %Width 
+InputParasR.t0 = 2e-12;     %Delay/Time
+InputParasR.wg = 5e-13;     %Width 
 InputParasR.phi = 0;           %Phase  
 
 % Group velocity and wavelength
@@ -54,7 +54,7 @@ Lambda = 1550e-9;     % Wavelength
 plotN = 20;           %Speed
 L = 1000e-6 * 1e2;    % Length of the system in cm
 XL = [0, L];          % X-axis limits
-YL = [-10e7, 10e7]; % Y-axis limits
+YL = [-InputParasL.E0, InputParasL.E0]; % Y-axis limits
 Nz = 300;             % Number of spatial points
 dz = L / (Nz - 1);    % Spatial step size delta x
 dt = dz / vg;         % Temporal step size delta t
@@ -134,8 +134,8 @@ for i = 2:Nt
     InputR(i) = ErN(t, InputParasR);
 
     % Update boundary reflections
-    RL = 0.9i; % Reflection coefficient for the left boundary
-    RR = 0.9i; % Reflection coefficient for the right boundary
+%     RL = 0.9i; % Reflection coefficient for the left boundary
+%     RR = 0.9i; % Reflection coefficient for the right boundary
     Ef(1) = InputL(i);% + RL * Er(1);   %Reflection
     Er(Nz) = InputR(i);% + RR * Ef(Nz); %Reflection
 
@@ -155,7 +155,7 @@ for i = 2:Nt
 
     % Plotting every 'plotN' steps
     if mod(i, plotN) == 0
-        subplot(3, 1, 1)
+        subplot(4, 1, 1)
         plot(z * 10000, real(Ef), 'r'); hold on
         plot(z * 10000, imag(Ef), 'r--'); hold off
         xlim(XL * 1e4)
@@ -164,7 +164,7 @@ for i = 2:Nt
         ylabel('E_f')
         legend('\Re', '\Im')
         hold off
-        subplot(3, 1, 2)
+        subplot(4, 1, 2)
         plot(z * 10000, real(Er), 'b'); hold on
         plot(z * 10000, imag(Er), 'b--'); hold off
         xlim(XL * 1e4)
@@ -174,7 +174,7 @@ for i = 2:Nt
         legend('\Re', '\Im')
 
         hold off
-        subplot(3, 1, 3);
+        subplot(4, 1, 3);
         plot(time * 1e12, real(InputL), 'r'); hold on
         plot(time * 1e12, real(OutputR), 'g');
         plot(time * 1e12, real(InputR), 'b');
@@ -185,6 +185,16 @@ for i = 2:Nt
         ylabel('E')
         legend('Left Input', 'Right Output', 'Right Input', 'Left Output', 'Location', 'east')
         hold off
+
+        subplot(4, 1, 4);
+        phase = angle(Ef);
+        plot(z * 10000, phase, 'k');
+        xlim(XL * 1e4)
+        xlabel('z (\mum)')
+        ylabel('Phase')
+        hold off
+        
+
         pause(0.01)
     end
 
@@ -200,7 +210,7 @@ title('Grating Profile (\kappa as a function of z)');
 grid on;
 
 % Compute Fourier transforms of the outputs
-fftOutputL = fft(OutputL);
+fftOutputL = fft(InputL);
 fftOutputR = fft(OutputR);
 
 % Shift zero frequency component to the center
@@ -220,7 +230,18 @@ plot(frequencies, abs(fftOutputR_shifted), 'b', 'LineWidth', 2);
 xlabel('Frequency (Hz)');
 ylabel('Magnitude');
 title('Frequency Spectrum of Left and Right Outputs');
-legend('Left Output', 'Right Output');
+legend('Left Input', 'Right Output');
+grid on;
+
+% Plot the magnitude spectra with logarithmic scale
+figure;
+semilogy(frequencies, abs(fftOutputL_shifted), 'r', 'LineWidth', 2); % Using semilogy to plot with logarithmic scale
+hold on;
+semilogy(frequencies, abs(fftOutputR_shifted), 'b', 'LineWidth', 2);
+xlabel('Frequency (Hz)');
+ylabel('Magnitude (log scale)'); % Update ylabel to indicate logarithmic scale
+title('Frequency Spectrum of Left and Right Outputs (Logarithmic Scale)');
+legend('Left Input', 'Right Output');
 grid on;
 
 
